@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd agent for Garmin Widget Fetcher
+  Runs the Python fetcher script every 900 seconds (15 minutes)
+  to keep widget data fresh.
+  
+  Install: cp this file to ~/Library/LaunchAgents/ then:
+    launchctl load ~/Library/LaunchAgents/com.garminwidget.fetcher.plist
+  
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.garminwidget.fetcher.plist
+-->
+<plist version="1.0">
+<dict>
+    <!-- Unique identifier for this agent -->
+    <key>Label</key>
+    <string>com.garminwidget.fetcher</string>
+
+    <!-- Command to execute: python3 path to fetcher script -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/python3</string>
+        <string>${HOME}/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/garmin_fetcher.py</string>
+    </array>
+
+    <!-- Run every 900 seconds (15 minutes) -->
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <!-- Also run immediately when the agent is loaded -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Log output for debugging -->
+    <key>StandardOutPath</key>
+    <string>/tmp/garmin-widget-fetcher.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/garmin-widget-fetcher.stderr.log</string>
+
+    <!-- Keep alive: restart if it crashes -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+</dict>
+</plist>

@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.build/
+Packages/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Credentials & config (may contain Garmin tokens)
+fetcher/config.json
+fetcher/garmin_credentials.json
+
+# Generated metrics file
+fetcher/garmin_metrics.json
+
+# Logs
+*.log
+
+# IDE
+*.swp
+*.swo
+*~
