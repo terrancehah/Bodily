@@ -1,19 +1,42 @@
-# Garmin Recovery Widget for macOS
+# Bodily — Garmin Connect Desktop Widget for macOS
 
-A macOS WidgetKit widget that displays near-real-time Garmin Connect recovery metrics on your desktop.
+A macOS desktop widget and companion app that displays your Garmin Connect daily metrics in a clean, instrument-panel interface. A Python background fetcher pulls data from the Garmin Connect API every 15 minutes, and a SwiftUI WidgetKit extension renders up to 6 customizable metric tiles on your desktop.
 
-**Metrics displayed:** Training Readiness, Body Battery, Stress, VO2 Max, HRV, Sleep Score
+## Metrics
+
+All 12 available metrics can be dragged into the widget grid via the companion app's customize mode:
+
+| Metric             | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| Training Readiness | Daily readiness score with level label                  |
+| Body Battery       | Current energy level (0–100)                            |
+| Stress             | Average stress score (lower is better)                  |
+| VO2 Max            | Cardiovascular fitness estimate                         |
+| HRV                | Heart rate variability with balance status              |
+| Sleep              | Sleep score with duration detail (e.g. "7h 20m")        |
+| Fitness Age        | Estimated age based on fitness level                    |
+| Training Status    | Productive, peaking, recovery, etc.                     |
+| Steps              | Daily steps with dynamic goal gauge                     |
+| Resting HR         | Resting heart rate (bpm)                                |
+| Intensity Minutes  | Weekly active minutes vs. goal (vigorous counts double) |
+| Training Load      | 7-day acute load with ACWR status (optimal/low/high)    |
 
 ## Architecture
 
 ```
 Python Fetcher (every 15 min via launchd)
-    → Fetches data from Garmin Connect API
-    → Writes JSON to App Group container
+    → Authenticates with Garmin Connect API
+    → Fetches 12 daily metrics + user goals
+    → Writes JSON to shared App Group container
+
+macOS Host App (SwiftUI)
+    → Reads JSON from App Group container
+    → Displays metric cards in a customizable drag-and-drop grid
+    → Persists metric selection to UserDefaults (shared suite)
 
 macOS Widget Extension (WidgetKit)
-    → Reads JSON from App Group container
-    → Renders medium-sized widget with 6 metrics
+    → Reads the same JSON + selection from App Group
+    → Renders a medium-sized widget with 6 metric tiles
 ```
 
 ## Prerequisites
@@ -58,61 +81,69 @@ This installs a launchd agent that runs the fetcher every 15 minutes.
 Since WidgetKit requires an Xcode project with specific targets, you need to create it manually:
 
 1. **Open Xcode** → File → New → Project → macOS → App
-   - Product Name: `GarminWidget`
-   - Team: Your Personal Team (free Apple ID)
-   - Bundle Identifier: `com.garminwidget.app`
-   - Interface: SwiftUI
-   - Language: Swift
+    - Product Name: `GarminWidget`
+    - Team: Your Personal Team (free Apple ID)
+    - Bundle Identifier: `com.garminwidget.app`
+    - Interface: SwiftUI
+    - Language: Swift
 
 2. **Add Widget Extension Target:**
-   - File → New → Target → macOS → Widget Extension
-   - Product Name: `GarminWidgetExtension`
-   - Uncheck "Include Configuration App Intent" (we use StaticConfiguration)
+    - File → New → Target → macOS → Widget Extension
+    - Product Name: `GarminWidgetExtension`
+    - Uncheck "Include Configuration App Intent" (we use StaticConfiguration)
 
 3. **Configure App Group:**
-   - Select the main app target → Signing & Capabilities → + Capability → App Groups
-   - Add: `group.com.garminwidget.shared`
-   - Repeat for the widget extension target
+    - Select the main app target → Signing & Capabilities → + Capability → App Groups
+    - Add: `group.com.garminwidget.shared`
+    - Repeat for the widget extension target
 
 4. **Add Source Files:**
-   - **Main App target:** Add all files from `GarminWidget/App/` and `GarminWidget/Shared/`
-   - **Widget Extension target:** Add all files from `GarminWidget/Widget/` and `GarminWidget/Shared/`
-   - Important: `GarminMetrics.swift` (Shared) must belong to BOTH targets
+    - **Main App target:** Add all files from `GarminWidget/App/` and `GarminWidget/Shared/`
+    - **Widget Extension target:** Add all files from `GarminWidget/Widget/` and `GarminWidget/Shared/`
+    - Important: `GarminMetrics.swift` (Shared) must belong to BOTH targets
 
 5. **Set Entitlements:**
-   - Main app: Use `GarminWidget/App/GarminWidget.entitlements`
-   - Widget extension: Use `GarminWidget/Widget/GarminWidgetExtension.entitlements`
+    - Main app: Use `GarminWidget/App/GarminWidget.entitlements`
+    - Widget extension: Use `GarminWidget/Widget/GarminWidgetExtension.entitlements`
 
 6. **Disable App Sandbox** (for development — allows the app to run Python):
-   - Main app target → Signing & Capabilities → Remove "App Sandbox" if present
+    - Main app target → Signing & Capabilities → Remove "App Sandbox" if present
 
 7. **Build & Run** the main app target, then add the widget to your desktop via the widget gallery.
 
 ## File Structure
 
 ```
-garmin-widget/
-├── fetcher/
-│   ├── garmin_fetcher.py       # Background data fetcher (runs via launchd)
-│   ├── first_login.py          # Interactive first-time auth setup
-│   └── requirements.txt        # Python dependencies
+Bodily/
+├── GarminWidget/                        # Host app target
+│   ├── GarminWidgetApp.swift             # App entry point
+│   ├── ContentView.swift                 # Main UI with customizable metric grid
+│   ├── AppViewModel.swift                # App state, drag-and-drop logic
+│   ├── GarminMetrics.swift               # Shared data model, styling, metric catalog
+│   ├── LoginView.swift                   # Garmin login flow
+│   ├── AccountView.swift                 # Account & device info
+│   └── GarminWidget.entitlements         # App Group entitlements
+├── GarminWidgetExtension/               # Widget extension target
+│   ├── GarminWidgetBundle.swift          # Widget bundle entry point
+│   ├── GarminWidgetProvider.swift        # Timeline provider
+│   ├── GarminWidgetView.swift            # Widget tile grid view
+│   ├── Info.plist
+│   └── Assets.xcassets/                  # Widget assets
+├── GarminWidgetExtension.entitlements    # Widget App Group entitlements
+├── GarminWidget.xcodeproj/              # Xcode project
+├── fetcher/                             # Python background fetcher
+│   ├── garmin_fetcher.py                 # Main metric fetcher
+│   ├── first_login.py                    # Interactive first-time auth
+│   ├── login.py                          # Login & token refresh
+│   ├── account-info.py                   # Profile & device info fetcher
+│   ├── debug_fetch.py                    # Debug utility
+│   └── requirements.txt                  # Python dependencies
 ├── launchd/
-│   └── com.garminwidget.fetcher.plist  # Template launchd agent
+│   └── com.garminwidget.fetcher.plist    # LaunchAgent template
 ├── scripts/
-│   └── install-launchd.sh      # Installer for the launchd agent
-├── GarminWidget/
-│   ├── Shared/
-│   │   └── GarminMetrics.swift         # Data model (shared between targets)
-│   ├── App/
-│   │   ├── GarminWidgetApp.swift       # App entry point
-│   │   ├── ContentView.swift           # Settings/status UI
-│   │   ├── AppViewModel.swift          # App logic/state
-│   │   └── GarminWidget.entitlements   # App entitlements
-│   └── Widget/
-│       ├── GarminWidgetBundle.swift     # Widget bundle entry point
-│       ├── GarminWidgetProvider.swift   # Timeline provider
-│       ├── GarminWidgetView.swift       # Widget SwiftUI view
-│       └── GarminWidgetExtension.entitlements
+│   └── install-launchd.sh                # LaunchAgent installer
+├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
@@ -123,8 +154,13 @@ garmin-widget/
 - **Token expired:** Tokens auto-refresh, but if your refresh token is revoked (e.g., password change), re-run `first_login.py`.
 - **Widget not updating:** WidgetKit has a budget of 40-70 refreshes/day. Ensure the launchd agent is running: `launchctl list | grep garminwidget`.
 
+## License
+
+MIT — see [LICENSE](LICENSE).
+
 ## Notes
 
 - This uses the unofficial `python-garminconnect` library. Garmin may change their API without notice.
-- Credentials are stored locally in `~/Library/Group Containers/group.com.garminwidget.shared/config.json` with restricted permissions (0600).
+- Credentials are stored locally in `~/.garminconnect/` with restricted permissions.
 - The widget refreshes every ~15 minutes, which is appropriate for recovery metrics that change slowly.
+- The companion app uses a cooldown-based drag-and-drop mechanism to prevent card jumping during reordering.
