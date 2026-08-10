@@ -49,77 +49,16 @@ macOS Widget Extension (WidgetKit)
     → Renders a medium-sized widget with 6 metric tiles
 ```
 
-## Prerequisites
+## Installation
 
-- macOS 14 (Sonoma) or later
-- Xcode 15+
-- Python 3.10+ (via Homebrew: `brew install python`)
-- A Garmin Connect account with a compatible device
+DMG releases are available on the [Releases](https://github.com/terrancehah/Bodily/releases) page.
 
-## Setup Instructions
+1. Download the latest `.dmg` file
+2. Open it and drag **Bodily** to your Applications folder
+3. Launch the app and log in with your Garmin Connect credentials
+4. Add the widget to your desktop via the macOS widget gallery
 
-### 1. Install Python Dependencies
-
-```bash
-cd fetcher
-pip3 install -r requirements.txt
-```
-
-### 2. First-Time Garmin Login
-
-Run the interactive login script to authenticate and save tokens:
-
-```bash
-cd fetcher
-python3 first_login.py
-```
-
-This will prompt for your Garmin email, password, and MFA code (if enabled).
-Tokens are saved to `~/.garminconnect/` for automatic refresh.
-
-### 3. Install the Background Fetcher
-
-```bash
-chmod +x scripts/install-launchd.sh
-./scripts/install-launchd.sh
-```
-
-This installs a launchd agent that runs the fetcher every 15 minutes.
-
-### 4. Set Up the Xcode Project
-
-Since WidgetKit requires an Xcode project with specific targets, you need to create it manually:
-
-1. **Open Xcode** → File → New → Project → macOS → App
-    - Product Name: `GarminWidget`
-    - Team: Your Personal Team (free Apple ID)
-    - Bundle Identifier: `com.garminwidget.app`
-    - Interface: SwiftUI
-    - Language: Swift
-
-2. **Add Widget Extension Target:**
-    - File → New → Target → macOS → Widget Extension
-    - Product Name: `GarminWidgetExtension`
-    - Uncheck "Include Configuration App Intent" (we use StaticConfiguration)
-
-3. **Configure App Group:**
-    - Select the main app target → Signing & Capabilities → + Capability → App Groups
-    - Add: `group.com.garminwidget.shared`
-    - Repeat for the widget extension target
-
-4. **Add Source Files:**
-    - **Main App target:** Add all files from `GarminWidget/App/` and `GarminWidget/Shared/`
-    - **Widget Extension target:** Add all files from `GarminWidget/Widget/` and `GarminWidget/Shared/`
-    - Important: `GarminMetrics.swift` (Shared) must belong to BOTH targets
-
-5. **Set Entitlements:**
-    - Main app: Use `GarminWidget/App/GarminWidget.entitlements`
-    - Widget extension: Use `GarminWidget/Widget/GarminWidgetExtension.entitlements`
-
-6. **Disable App Sandbox** (for development — allows the app to run Python):
-    - Main app target → Signing & Capabilities → Remove "App Sandbox" if present
-
-7. **Build & Run** the main app target, then add the widget to your desktop via the widget gallery.
+> **Requirements:** macOS 14 (Sonoma) or later, and a Garmin Connect account.
 
 ## File Structure
 
@@ -156,13 +95,6 @@ Bodily/
 ├── LICENSE
 └── README.md
 ```
-
-## Troubleshooting
-
-- **Widget shows "--" for all values:** The fetcher hasn't run yet or can't authenticate. Check `/tmp/garmin-widget-fetcher.stdout.log`.
-- **"Not Connected" in host app:** Run `first_login.py` to set up authentication.
-- **Token expired:** Tokens auto-refresh, but if your refresh token is revoked (e.g., password change), re-run `first_login.py`.
-- **Widget not updating:** WidgetKit has a budget of 40-70 refreshes/day. Ensure the launchd agent is running: `launchctl list | grep garminwidget`.
 
 ## License
 
