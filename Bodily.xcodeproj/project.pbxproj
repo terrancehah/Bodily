@@ -223,7 +223,10 @@
 /* Begin PBXShellScriptBuildPhase section */
 		FE3450D43029C812001353E3 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
-			shellPath = bash;
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/fetcher/garmin_fetcher.py",
+			);
+			shellPath = /bin/bash;
 			shellScript = (
 				"# Type a script or drag a script file from your workspace to insert its path.",
 				"\"${PROJECT_DIR}/scripts/copy-fetcher-to-resources.sh\"",
