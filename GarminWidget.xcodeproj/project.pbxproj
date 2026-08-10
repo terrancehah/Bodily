@@ -133,6 +133,7 @@
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
 				000000000000000140000000 /* Resources */,
+				FE3450D43029C812001353E3 /* ShellScript */,
 				FE53A867301A9E8E001586AB /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -218,6 +219,18 @@
 			);
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FE3450D43029C812001353E3 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			shellPath = bash;
+			shellScript = (
+				"# Type a script or drag a script file from your workspace to insert its path.",
+				"\"${PROJECT_DIR}/scripts/copy-fetcher-to-resources.sh\"",
+				"",
+			);
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		000000000000000120000000 /* Sources */ = {
