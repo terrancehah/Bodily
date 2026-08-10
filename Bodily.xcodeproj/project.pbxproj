@@ -227,7 +227,39 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/fetcher/garmin_fetcher.py",
 			);
 			shellPath = /bin/bash;
-			shellScript = "SRC_DIR=\"${PROJECT_DIR}/fetcher\"\nDST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/fetcher\"\nMARKER=\"${DST_DIR}/.copied\"\n\necho \"Copying fetcher scripts to app bundle...\"\necho \"  Source: ${SRC_DIR}\"\necho \"  Dest:   ${DST_DIR}\"\n\nif [ -f \"${MARKER}\" ] && [ \"$(find \"${SRC_DIR}\" -name '*.py' -newer \"${MARKER}\" 2>/dev/null)\" = \"\" ]; then\n    echo \"  → Skipped (no changes since last copy)\"\n    exit 0\nfi\n\nmkdir -p \"${DST_DIR}\"\n\ncopied=0\nfor file in \"${SRC_DIR}\"/*.py \"${SRC_DIR}\"/requirements.txt; do\n    if [ -f \"$file\" ]; then\n        cp \"$file\" \"${DST_DIR}/\"\n        echo \"  → $(basename \"$file\")\"\n        copied=1\n    fi\ndone\n\nif [ $copied -eq 0 ]; then\n    echo \"  WARNING: No fetcher scripts found at ${SRC_DIR}\"\nfi\n\ntouch \"${MARKER}\"\necho \"Fetcher scripts copied successfully.\"";
+			shellScript = (
+				"SRC_DIR=\"${PROJECT_DIR}/fetcher\"",
+				"DST_DIR=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/fetcher\"",
+				"MARKER=\"${DST_DIR}/.copied\"",
+				"",
+				"echo \"Copying fetcher scripts to app bundle...\"",
+				"echo \"  Source: ${SRC_DIR}\"",
+				"echo \"  Dest:   ${DST_DIR}\"",
+				"",
+				"if [ -f \"${MARKER}\" ] && [ \"$(find \"${SRC_DIR}\" -name '*.py' -newer \"${MARKER}\" 2>/dev/null)\" = \"\" ]; then",
+				"    echo \"  → Skipped (no changes since last copy)\"",
+				"    exit 0",
+				"fi",
+				"",
+				"mkdir -p \"${DST_DIR}\"",
+				"",
+				"copied=0",
+				"for file in \"${SRC_DIR}\"/*.py \"${SRC_DIR}\"/requirements.txt; do",
+				"    if [ -f \"$file\" ]; then",
+				"        cp \"$file\" \"${DST_DIR}/\"",
+				"        echo \"  → $(basename \"$file\")\"",
+				"        copied=1",
+				"    fi",
+				"done",
+				"",
+				"if [ $copied -eq 0 ]; then",
+				"    echo \"  WARNING: No fetcher scripts found at ${SRC_DIR}\"",
+				"fi",
+				"",
+				"touch \"${MARKER}\"",
+				"echo \"Fetcher scripts copied successfully.\"",
+				"",
+			);
 		};
 /* End PBXShellScriptBuildPhase section */
 

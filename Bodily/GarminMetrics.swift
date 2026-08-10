@@ -490,15 +490,15 @@ enum MetricID: String, CaseIterable, Codable, Identifiable {
     /// UserDefaults key the host app writes the ordered selection to
     private static let selectionKey = "bodily.visibleMetrics"
 
-    /// The selection saved by the host app, capped at the widget's 6-tile capacity.
-    /// Falls back to the default six when nothing has been saved yet.
-    static func savedSelection() -> [MetricID] {
+    /// The selection saved by the host app, capped at `maxCount` tiles.
+    /// Falls back to the default visible set when nothing has been saved yet.
+    static func savedSelection(maxCount: Int = 6) -> [MetricID] {
         let defaults = UserDefaults(suiteName: sharedSuiteName)
         guard let rawValues = defaults?.stringArray(forKey: selectionKey) else {
-            return defaultVisible
+            return Array(defaultVisible.prefix(maxCount))
         }
         let restored = rawValues.compactMap { MetricID(rawValue: $0) }
-        return restored.isEmpty ? defaultVisible : Array(restored.prefix(6))
+        return restored.isEmpty ? Array(defaultVisible.prefix(maxCount)) : Array(restored.prefix(maxCount))
     }
 
     var title: String {

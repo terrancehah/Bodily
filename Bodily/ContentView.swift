@@ -395,11 +395,11 @@ struct MetricCard: View {
                     .font(.system(size: 9, weight: .medium, design: .rounded))
                     .foregroundStyle(BodilyPalette.tertiaryText)
                     .lineLimit(1)
-            } else if metric.value != nil, let level = metric.level {
-                // Metrics with both a numeric value and a level (e.g. Training Load)
+            } else if let value = metric.value, let level = metric.level {
+                // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
                 Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
                     .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
+                    .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
                     .lineLimit(1)
             }
 

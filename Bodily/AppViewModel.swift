@@ -54,8 +54,8 @@ class AppViewModel: ObservableObject {
     /// UserDefaults key for the customized metric grid (ordered raw value array)
     private let visibleMetricsKey = "bodily.visibleMetrics"
 
-    /// Grid capacity — matches the medium widget's 6-tile layout so app and widget mirror each other
-    static let maxVisibleMetrics = 6
+    /// Grid capacity — 9 tiles so the large widget (3×3) can show the full selection
+    static let maxVisibleMetrics = 9
 
     /// UserDefaults suite shared with the widget extension so both render the same selection
     private let sharedDefaults = UserDefaults(suiteName: "group.com.bodily.shared")

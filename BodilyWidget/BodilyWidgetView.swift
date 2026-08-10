@@ -1,7 +1,8 @@
 import WidgetKit
 import SwiftUI
 
-/// The main widget definition for medium-sized Garmin daily metrics.
+/// The main widget definition for Bodily daily metrics.
+/// Supports medium (6 tiles, 3×2) and large (9 tiles, 3×3) families.
 struct BodilyWidget: Widget {
     let kind: String = "BodilyWidget"
     
@@ -13,30 +14,34 @@ struct BodilyWidget: Widget {
         }
         .configurationDisplayName("Bodily")
         .description("Your Garmin metrics at a glance.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
 
-/// The SwiftUI view rendered inside the medium widget.
-/// Displays 6 metrics in a 3x2 grid with color-coded values.
+/// The SwiftUI view rendered inside the widget.
+/// Medium: 6 metrics in a 3×2 grid. Large: 9 metrics in a 3×3 grid.
 struct BodilyWidgetView: View {
     let entry: BodilyMetricsEntry
+    @Environment(\.widgetFamily) var family
+    
+    /// Number of tiles to show based on the widget family
+    private var tileCount: Int {
+        switch family {
+        case .systemLarge: return 9
+        default: return 6
+        }
+    }
     
     var body: some View {
         // Tiles follow the host app's customized selection (order included),
-        // read from the shared App Group suite and capped at 6
-        let selection = MetricID.savedSelection()
+        // read from the shared App Group suite and capped at the family's capacity
+        let selection = MetricID.savedSelection(maxCount: tileCount)
 
         ZStack(alignment: .topLeading) {
 
-            // Header: volt dot + tracked wordmark on the left, timestamp on the right
+            // Header: tracked wordmark on the left, timestamp on the right
             HStack(alignment: .center, spacing: 5) {
-                // Volt dot — the brand's accent mark, signals the instrument is live
-//                Circle()
-//                    .fill(BodilyPalette.voltAccent)
-//                    .frame(width: 5, height: 5)
-
                 Text("BODILY")
                     .font(.system(size: 12, weight: .semibold))
                     .tracking(1.4)
@@ -52,7 +57,7 @@ struct BodilyWidgetView: View {
             .frame(alignment: .top)
             .padding(.bottom, 2)
 
-            // Centered metric grid — 3 columns, as many rows as the selection needs
+            // Centered metric grid — 3 columns, rows depend on the widget family
             VStack(alignment: .center, spacing: 8) {
 
                 Spacer()
@@ -132,11 +137,11 @@ struct MetricTile: View {
                     .font(.system(size: 8, weight: .medium, design: .rounded))
                     .foregroundStyle(BodilyPalette.tertiaryText)
                     .lineLimit(1)
-            } else if metric.value != nil, let level = metric.level {
-                // Metrics with both a numeric value and a level (e.g. Training Load)
+            } else if let value = metric.value, let level = metric.level {
+                // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
                 Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
                     .font(.system(size: 8, weight: .medium, design: .rounded))
-                    .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
+                    .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
                     .lineLimit(1)
             }
 
@@ -171,7 +176,14 @@ struct MetricTile: View {
 
 // MARK: - Widget Preview
 
-#Preview(as: .systemMedium) {
+#Preview("Medium", as: .systemMedium) {
+    BodilyWidget()
+} timeline: {
+    BodilyMetricsEntry(date: Date(), metrics: .placeholder, isStale: false)
+    BodilyMetricsEntry(date: Date(), metrics: .unavailable, isStale: true)
+}
+
+#Preview("Large", as: .systemLarge) {
     BodilyWidget()
 } timeline: {
     BodilyMetricsEntry(date: Date(), metrics: .placeholder, isStale: false)
