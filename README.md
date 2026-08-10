@@ -2,6 +2,16 @@
 
 A macOS desktop widget and companion app that displays your Garmin Connect daily metrics in a clean, instrument-panel interface. A Python background fetcher pulls data from the Garmin Connect API every 15 minutes, and a SwiftUI WidgetKit extension renders up to 6 customizable metric tiles on your desktop.
 
+## Screenshots
+
+### Desktop Widget
+
+<img src="bodily.png" width="400" alt="Bodily desktop widget showing 6 Garmin metric tiles">
+
+### Companion App
+
+<img src="bodily-app.png" width="420" alt="Bodily companion app with customizable metric grid and drag-and-drop customize panel">
+
 ## Metrics
 
 All 12 available metrics can be dragged into the widget grid via the companion app's customize mode:
