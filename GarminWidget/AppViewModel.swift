@@ -34,6 +34,8 @@ class AppViewModel: ObservableObject {
     @Published var fetcherRunning: Bool = false
     /// True while the account-info script is refreshing profile data in the background
     @Published var isRefreshingAccountInfo: Bool = false
+    /// True during first-launch environment setup (venv creation, pip install, launchd agent)
+    @Published var isSettingUpEnvironment: Bool = false
     /// Ordered list of metrics shown in the main grid — user-customizable via the drawer
     @Published var visibleMetrics: [MetricID] = MetricID.defaultVisible
 
@@ -68,34 +70,72 @@ class AppViewModel: ObservableObject {
     private var loginEmail: String = ""
     private var loginPassword: String = ""
     
+    // MARK: - Path Resolution
+
+    /// Resolves the path to a bundled fetcher script, falling back to the
+    /// Xcode project directory during development (Bundle resources are only
+    /// populated when the app is archived/run as a standalone .app).
+    private func scriptPath(_ filename: String) -> String {
+        // Production: scripts are copied into Resources/fetcher/ by the build phase
+        if let resourcePath = Bundle.main.resourcePath {
+            let bundled = "\(resourcePath)/fetcher/\(filename)"
+            if FileManager.default.fileExists(atPath: bundled) {
+                return bundled
+            }
+        }
+        // Development fallback: look in the Xcode project directory
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let devPath = "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/\(filename)"
+        return devPath
+    }
+
     /// Path to the Python fetcher script
-    private let fetcherScriptPath: String = {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/garmin_fetcher.py"
-    }()
-    
-    /// Path to the venv Python executable
-    private let pythonPath: String = {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/.venv/bin/python3"
-    }()
-    
-    /// Path to the fetcher log file
+    private var fetcherScriptPath: String { scriptPath("garmin_fetcher.py") }
+
+    /// Path to the non-interactive login script
+    private var loginScriptPath: String { scriptPath("login.py") }
+
+    /// Path to the account info script
+    private var accountInfoScriptPath: String { scriptPath("account-info.py") }
+
+    /// Discovers a working Python 3 interpreter on the user's system.
+    /// Tries Homebrew paths first (they allow pip installs), then system Python.
+    /// Returns nil if no Python 3 is found — the first-launch setup will guide the user.
+    private func discoverSystemPython() -> String? {
+        let candidates = [
+            "/opt/homebrew/bin/python3",       // Homebrew Apple Silicon
+            "/usr/local/bin/python3",           // Homebrew Intel
+            "/usr/bin/python3",                 // System (pip restricted on macOS 14+)
+        ]
+        for path in candidates {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+        return nil
+    }
+
+    /// Path to the app-managed venv Python executable.
+    /// Created on first launch so the app controls its own dependency environment.
+    private var venvPythonPath: String {
+        let appSupport = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Bodily")
+        return appSupport.appendingPathComponent("venv/bin/python3").path
+    }
+
+    /// Returns the Python to use: venv Python if set up, otherwise system Python.
+    /// The refresh/login flows call this so they always use the best available Python.
+    private var resolvedPythonPath: String {
+        if FileManager.default.fileExists(atPath: venvPythonPath) {
+            return venvPythonPath
+        }
+        return discoverSystemPython() ?? "/usr/bin/python3"
+    }
+
+    /// Path to the fetcher log file (in the App Group container so the widget can read it)
     private let logPath: String = {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return "\(home)/Library/Group Containers/group.com.bodily.shared/fetcher.log"
-    }()
-    
-    /// Path to the non-interactive login script (reads credentials from stdin)
-    private let loginScriptPath: String = {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/login.py"
-    }()
-
-    /// Path to the account info script (refreshes profile + device data via saved tokens)
-    private let accountInfoScriptPath: String = {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/account-info.py"
     }()
 
     /// Path to the token store / config directory (~/.garminconnect)
@@ -103,6 +143,12 @@ class AppViewModel: ObservableObject {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return "\(home)/.garminconnect"
     }()
+
+    /// Directory for app-managed data (venv, launchd plist backups)
+    private var appSupportDirectory: String {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home.appendingPathComponent("Library/Application Support/Bodily").path
+    }
     
     init() {
         loadSavedEmail()
@@ -220,7 +266,10 @@ class AppViewModel: ObservableObject {
         isRefreshing = true
         
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: pythonPath)
+        // Ensure the venv is set up before running the fetcher (first-launch path)
+        ensureEnvironmentSetup()
+
+        task.executableURL = URL(fileURLWithPath: resolvedPythonPath)
         task.arguments = [fetcherScriptPath]
         
         // Use the full parent process environment so Python and its
@@ -268,7 +317,7 @@ class AppViewModel: ObservableObject {
         isRefreshingAccountInfo = true
 
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: pythonPath)
+        task.executableURL = URL(fileURLWithPath: resolvedPythonPath)
         task.arguments = [accountInfoScriptPath]
 
         let stdoutPipe = Pipe()
@@ -357,6 +406,126 @@ class AppViewModel: ObservableObject {
     func revealConfigDirectory() {
         NSWorkspace.shared.open(URL(fileURLWithPath: configDirectoryPath))
     }
+
+    // MARK: - Environment Setup
+
+    /// Ensures the Python venv with garminconnect exists and the launchd agent is
+    /// installed. Called before every fetch — fast-paths when already set up.
+    /// On first launch, this creates the venv, pip-installs the dependency, and
+    /// writes the launchd plist so the fetcher runs every 15 minutes in the background.
+    func ensureEnvironmentSetup() {
+        // Fast path: venv already exists
+        if FileManager.default.fileExists(atPath: venvPythonPath) {
+            return
+        }
+
+        guard let systemPython = discoverSystemPython() else {
+            print("[AppViewModel] No Python 3 found on system — cannot set up environment")
+            return
+        }
+
+        isSettingUpEnvironment = true
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let fm = FileManager.default
+
+            // Create app support directory if needed
+            try? fm.createDirectory(atPath: self.appSupportDirectory,
+                                    withIntermediateDirectories: true)
+
+            // Create venv
+            let venvTask = Process()
+            venvTask.executableURL = URL(fileURLWithPath: systemPython)
+            venvTask.arguments = ["-m", "venv", "\(self.appSupportDirectory)/venv"]
+            venvTask.environment = ProcessInfo.processInfo.environment
+            do {
+                try venvTask.run()
+                venvTask.waitUntilExit()
+                print("[AppViewModel] venv created at \(self.appSupportDirectory)/venv")
+            } catch {
+                print("[AppViewModel] Failed to create venv: \(error)")
+                DispatchQueue.main.async { self.isSettingUpEnvironment = false }
+                return
+            }
+
+            // Pip install garminconnect into the venv
+            let pipTask = Process()
+            pipTask.executableURL = URL(fileURLWithPath: self.venvPythonPath)
+            pipTask.arguments = ["-m", "pip", "install", "--quiet", "garminconnect"]
+            pipTask.environment = ProcessInfo.processInfo.environment
+            do {
+                try pipTask.run()
+                pipTask.waitUntilExit()
+                print("[AppViewModel] garminconnect installed into venv")
+            } catch {
+                print("[AppViewModel] Failed to pip install garminconnect: \(error)")
+                DispatchQueue.main.async { self.isSettingUpEnvironment = false }
+                return
+            }
+
+            // Install the launchd agent
+            self.installLaunchAgent()
+
+            DispatchQueue.main.async {
+                self.isSettingUpEnvironment = false
+                self.checkFetcherStatus()
+            }
+        }
+    }
+
+    /// Writes and loads the launchd plist that runs the fetcher every 15 minutes.
+    /// Uses the venv Python and the bundled fetcher script so paths survive app updates.
+    private func installLaunchAgent() {
+        let plistDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents")
+        try? FileManager.default.createDirectory(at: plistDir,
+                                                  withIntermediateDirectories: true)
+        let plistPath = plistDir.appendingPathComponent("\(fetcherAgentLabel).plist").path
+
+        let plistContent = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>\(fetcherAgentLabel)</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>\(venvPythonPath)</string>
+                <string>\(fetcherScriptPath)</string>
+            </array>
+            <key>StartInterval</key>
+            <integer>900</integer>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StandardOutPath</key>
+            <string>/tmp/garmin-widget-fetcher.stdout.log</string>
+            <key>StandardErrorPath</key>
+            <string>/tmp/garmin-widget-fetcher.stderr.log</string>
+        </dict>
+        </plist>
+        """
+
+        do {
+            try plistContent.write(toFile: plistPath, atomically: true, encoding: .utf8)
+            print("[AppViewModel] launchd plist written to \(plistPath)")
+        } catch {
+            print("[AppViewModel] Failed to write launchd plist: \(error)")
+            return
+        }
+
+        // Load the agent
+        let loadTask = Process()
+        loadTask.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        loadTask.arguments = ["load", plistPath]
+        do {
+            try loadTask.run()
+            loadTask.waitUntilExit()
+            print("[AppViewModel] launchd agent loaded")
+        } catch {
+            print("[AppViewModel] Failed to load launchd agent: \(error)")
+        }
+    }
     
     // MARK: - Login
     
@@ -412,7 +581,7 @@ class AppViewModel: ObservableObject {
         loginPassword = password
         
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: pythonPath)
+        task.executableURL = URL(fileURLWithPath: resolvedPythonPath)
         task.arguments = [loginScriptPath]
         
         // Pipe stdin (for credentials + MFA code), stdout (for status), stderr (for debugging)
