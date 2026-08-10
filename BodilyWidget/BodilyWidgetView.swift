@@ -33,13 +33,17 @@ struct BodilyWidgetView: View {
         }
     }
     
+    /// Vertical spacing between grid rows — tighter for medium, roomier for large
+    private var rowSpacing: CGFloat {
+        family == .systemLarge ? 14 : 8
+    }
+    
     var body: some View {
         // Tiles follow the host app's customized selection (order included),
         // read from the shared App Group suite and capped at the family's capacity
         let selection = MetricID.savedSelection(maxCount: tileCount)
 
-        ZStack(alignment: .topLeading) {
-
+        VStack(spacing: 0) {
             // Header: tracked wordmark on the left, timestamp on the right
             HStack(alignment: .center, spacing: 5) {
                 Text("BODILY")
@@ -54,31 +58,28 @@ struct BodilyWidgetView: View {
                     .font(.system(size: 10, weight: .regular, design: .rounded))
                     .foregroundStyle(BodilyPalette.tertiaryText)
             }
-            .frame(alignment: .top)
-            .padding(.bottom, 2)
+            .padding(.bottom, 4)
 
-            // Centered metric grid — 3 columns, rows depend on the widget family
-            VStack(alignment: .center, spacing: 8) {
+            Spacer(minLength: 0)
 
-                Spacer()
-
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
-                    spacing: 8
-                ) {
-                    ForEach(selection) { metricID in
-                        MetricTile(
-                            label: metricID.title,
-                            metric: metricID.entry(from: entry.metrics),
-                            icon: metricID.icon,
-                            type: metricID.type,
-                            format: metricID.format,
-                            unit: metricID.unit
-                        )
-                    }
+            // Metric grid — 3 columns, vertically centered in the remaining space
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
+                spacing: rowSpacing
+            ) {
+                ForEach(selection) { metricID in
+                    MetricTile(
+                        label: metricID.title,
+                        metric: metricID.entry(from: entry.metrics),
+                        icon: metricID.icon,
+                        type: metricID.type,
+                        format: metricID.format,
+                        unit: metricID.unit
+                    )
                 }
             }
-            .frame(alignment: .center)
+
+            Spacer(minLength: 0)
         }
         .padding(16)
     }
