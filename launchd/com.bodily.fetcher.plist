@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  launchd agent for Garmin Widget Fetcher
+  launchd agent for Bodily Fetcher
   Runs the Python fetcher script every 900 seconds (15 minutes)
   to keep widget data fresh.
   
   Install: cp this file to ~/Library/LaunchAgents/ then:
-    launchctl load ~/Library/LaunchAgents/com.garminwidget.fetcher.plist
+    launchctl load ~/Library/LaunchAgents/com.bodily.fetcher.plist
   
   Uninstall:
-    launchctl unload ~/Library/LaunchAgents/com.garminwidget.fetcher.plist
+    launchctl unload ~/Library/LaunchAgents/com.bodily.fetcher.plist
 -->
 <plist version="1.0">
 <dict>
     <!-- Unique identifier for this agent -->
     <key>Label</key>
-    <string>com.garminwidget.fetcher</string>
+    <string>com.bodily.fetcher</string>
 
     <!-- Command to execute: python3 path to fetcher script -->
     <key>ProgramArguments</key>
@@ -34,9 +34,9 @@
 
     <!-- Log output for debugging -->
     <key>StandardOutPath</key>
-    <string>/tmp/garmin-widget-fetcher.stdout.log</string>
+    <string>/tmp/bodily-fetcher.stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/garmin-widget-fetcher.stderr.log</string>
+    <string>/tmp/bodily-fetcher.stderr.log</string>
 
     <!-- Keep alive: restart if it crashes -->
     <key>KeepAlive</key>

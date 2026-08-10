@@ -64,22 +64,22 @@ DMG releases are available on the [Releases](https://github.com/terrancehah/Bodi
 
 ```
 Bodily/
-├── GarminWidget/                        # Host app target
-│   ├── GarminWidgetApp.swift             # App entry point
+├── Bodily/                              # Host app target
+│   ├── BodilyApp.swift                   # App entry point
 │   ├── ContentView.swift                 # Main UI with customizable metric grid
 │   ├── AppViewModel.swift                # App state, drag-and-drop logic
 │   ├── GarminMetrics.swift               # Shared data model, styling, metric catalog
 │   ├── LoginView.swift                   # Garmin login flow
 │   ├── AccountView.swift                 # Account & device info
-│   └── GarminWidget.entitlements         # App Group entitlements
-├── GarminWidgetExtension/               # Widget extension target
-│   ├── GarminWidgetBundle.swift          # Widget bundle entry point
-│   ├── GarminWidgetProvider.swift        # Timeline provider
-│   ├── GarminWidgetView.swift            # Widget tile grid view
+│   └── Bodily.entitlements               # App Group entitlements
+├── BodilyWidget/                        # Widget extension target
+│   ├── BodilyWidgetBundle.swift          # Widget bundle entry point
+│   ├── BodilyWidgetProvider.swift        # Timeline provider
+│   ├── BodilyWidgetView.swift            # Widget tile grid view
 │   ├── Info.plist
 │   └── Assets.xcassets/                  # Widget assets
-├── GarminWidgetExtension.entitlements    # Widget App Group entitlements
-├── GarminWidget.xcodeproj/              # Xcode project
+├── BodilyWidget.entitlements            # Widget App Group entitlements
+├── Bodily.xcodeproj/                    # Xcode project
 ├── fetcher/                             # Python background fetcher
 │   ├── garmin_fetcher.py                 # Main metric fetcher
 │   ├── first_login.py                    # Interactive first-time auth
@@ -88,9 +88,11 @@ Bodily/
 │   ├── debug_fetch.py                    # Debug utility
 │   └── requirements.txt                  # Python dependencies
 ├── launchd/
-│   └── com.garminwidget.fetcher.plist    # LaunchAgent template
+│   └── com.bodily.fetcher.plist          # LaunchAgent template
 ├── scripts/
-│   └── install-launchd.sh                # LaunchAgent installer
+│   ├── install-launchd.sh                # LaunchAgent installer
+│   ├── copy-fetcher-to-resources.sh      # Xcode build phase script
+│   └── create-dmg.sh                     # DMG packaging script
 ├── .gitignore
 ├── LICENSE
 └── README.md

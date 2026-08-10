@@ -7,7 +7,7 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 		<key>NSExtensionPrincipalClass</key>
-		<string>BodilyWidget.GarminWidgetBundle</string>
+		<string>BodilyWidget.BodilyWidgetBundle</string>
 	</dict>
 </dict>
 </plist>

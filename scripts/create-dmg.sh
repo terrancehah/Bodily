@@ -38,7 +38,7 @@ mkdir -p "${BUILD_DIR}"
 # Step 2: Archive the app in Release configuration
 echo "2. Archiving ${APP_NAME} (Release)..."
 xcodebuild archive \
-    -project "${PROJECT_DIR}/GarminWidget.xcodeproj" \
+    -project "${PROJECT_DIR}/Bodily.xcodeproj" \
     -scheme "${APP_NAME}" \
     -configuration Release \
     -archivePath "${ARCHIVE_PATH}" \

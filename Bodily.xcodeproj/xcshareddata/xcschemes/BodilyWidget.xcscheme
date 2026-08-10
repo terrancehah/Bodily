@@ -18,7 +18,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "FE53A839301A9A13001586AB"
                BuildableName = "BodilyWidget.appex"
-               ReferencedContainer = "container:GarminWidget.xcodeproj">
+               ReferencedContainer = "container:Bodily.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -31,7 +31,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "000000000000000100000000"
                BuildableName = "Bodily.app"
-               ReferencedContainer = "container:GarminWidget.xcodeproj">
+               ReferencedContainer = "container:Bodily.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -64,7 +64,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FE53A839301A9A13001586AB"
             BuildableName = "BodilyWidget.appex"
-            ReferencedContainer = "container:GarminWidget.xcodeproj">
+            ReferencedContainer = "container:Bodily.xcodeproj">
          </BuildableReference>
       </RemoteRunnable>
       <MacroExpansion>
@@ -72,7 +72,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "000000000000000100000000"
             BuildableName = "Bodily.app"
-            ReferencedContainer = "container:GarminWidget.xcodeproj">
+            ReferencedContainer = "container:Bodily.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <EnvironmentVariables>
@@ -107,7 +107,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "000000000000000100000000"
             BuildableName = "Bodily.app"
-            ReferencedContainer = "container:GarminWidget.xcodeproj">
+            ReferencedContainer = "container:Bodily.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

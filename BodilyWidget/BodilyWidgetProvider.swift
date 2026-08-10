@@ -2,7 +2,7 @@ import WidgetKit
 import SwiftUI
 
 /// Timeline entry containing the metrics data and its display date.
-struct GarminMetricsEntry: TimelineEntry {
+struct BodilyMetricsEntry: TimelineEntry {
     let date: Date
     let metrics: GarminMetrics
     let isStale: Bool  // True if data is older than 30 minutes
@@ -10,11 +10,11 @@ struct GarminMetricsEntry: TimelineEntry {
 
 /// Timeline provider that reads metrics from the shared JSON file.
 /// WidgetKit calls this to get data for rendering the widget.
-struct GarminMetricsProvider: TimelineProvider {
+struct BodilyMetricsProvider: TimelineProvider {
     
     /// Provides a placeholder entry for the widget gallery preview.
-    func placeholder(in context: Context) -> GarminMetricsEntry {
-        GarminMetricsEntry(
+    func placeholder(in context: Context) -> BodilyMetricsEntry {
+        BodilyMetricsEntry(
             date: Date(),
             metrics: .placeholder,
             isStale: false
@@ -22,14 +22,14 @@ struct GarminMetricsProvider: TimelineProvider {
     }
     
     /// Provides a snapshot for quick display (e.g., widget gallery).
-    func getSnapshot(in context: Context, completion: @escaping (GarminMetricsEntry) -> Void) {
+    func getSnapshot(in context: Context, completion: @escaping (BodilyMetricsEntry) -> Void) {
         let entry = createEntry()
         completion(entry)
     }
     
     /// Provides a timeline of entries for scheduled updates.
     /// Requests a refresh every 15 minutes to align with the fetcher schedule.
-    func getTimeline(in context: Context, completion: @escaping (Timeline<GarminMetricsEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<BodilyMetricsEntry>) -> Void) {
         let currentEntry = createEntry()
         
         // Request next timeline update in 15 minutes
@@ -40,7 +40,7 @@ struct GarminMetricsProvider: TimelineProvider {
     }
     
     /// Creates a timeline entry by reading the latest metrics from disk.
-    private func createEntry() -> GarminMetricsEntry {
+    private func createEntry() -> BodilyMetricsEntry {
         // Debug: log the container URL resolution
         let containerURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: MetricsReader.appGroupID
@@ -62,7 +62,7 @@ struct GarminMetricsProvider: TimelineProvider {
             isStale = true
         }
         
-        return GarminMetricsEntry(
+        return BodilyMetricsEntry(
             date: Date(),
             metrics: metrics,
             isStale: isStale

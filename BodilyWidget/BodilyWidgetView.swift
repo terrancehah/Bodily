@@ -6,8 +6,8 @@ struct BodilyWidget: Widget {
     let kind: String = "BodilyWidget"
     
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: GarminMetricsProvider()) { entry in
-            GarminWidgetView(entry: entry)
+        StaticConfiguration(kind: kind, provider: BodilyMetricsProvider()) { entry in
+            BodilyWidgetView(entry: entry)
                 // Slate-tinted surface: off-white in light mode, near-black in dark mode
                 .containerBackground(BodilyPalette.surface, for: .widget)
         }
@@ -20,8 +20,8 @@ struct BodilyWidget: Widget {
 
 /// The SwiftUI view rendered inside the medium widget.
 /// Displays 6 metrics in a 3x2 grid with color-coded values.
-struct GarminWidgetView: View {
-    let entry: GarminMetricsEntry
+struct BodilyWidgetView: View {
+    let entry: BodilyMetricsEntry
     
     var body: some View {
         // Tiles follow the host app's customized selection (order included),
@@ -174,6 +174,6 @@ struct MetricTile: View {
 #Preview(as: .systemMedium) {
     BodilyWidget()
 } timeline: {
-    GarminMetricsEntry(date: Date(), metrics: .placeholder, isStale: false)
-    GarminMetricsEntry(date: Date(), metrics: .unavailable, isStale: true)
+    BodilyMetricsEntry(date: Date(), metrics: .placeholder, isStale: false)
+    BodilyMetricsEntry(date: Date(), metrics: .unavailable, isStale: true)
 }

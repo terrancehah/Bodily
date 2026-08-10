@@ -3,7 +3,7 @@ import SwiftUI
 /// Main entry point for the Bodily host application.
 /// Provides a minimal dashboard for daily metrics and fetcher controls.
 @main
-struct GarminWidgetApp: App {
+struct BodilyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

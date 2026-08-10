@@ -1,18 +1,18 @@
 #!/bin/bash
 # ============================================================
-# Garmin Widget Fetcher - launchd Agent Installer
+# Bodily Fetcher - launchd Agent Installer
 # Installs the background fetcher that runs every 15 minutes.
 # ============================================================
 
 set -e
 
-PLIST_NAME="com.garminwidget.fetcher.plist"
+PLIST_NAME="com.bodily.fetcher.plist"
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FETCHER_PATH="$SCRIPT_DIR/fetcher/garmin_fetcher.py"
 PLIST_SOURCE="$SCRIPT_DIR/launchd/$PLIST_NAME"
 PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 
-echo "=== Garmin Widget Fetcher Installer ==="
+echo "=== Bodily Fetcher Installer ==="
 echo
 
 # Verify the fetcher script exists
@@ -47,7 +47,7 @@ cat > "$PLIST_DEST" << EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.garminwidget.fetcher</string>
+    <string>com.bodily.fetcher</string>
     <key>ProgramArguments</key>
     <array>
         <string>$PYTHON_PATH</string>
@@ -58,9 +58,9 @@ cat > "$PLIST_DEST" << EOF
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/garmin-widget-fetcher.stdout.log</string>
+    <string>/tmp/bodily-fetcher.stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/garmin-widget-fetcher.stderr.log</string>
+    <string>/tmp/bodily-fetcher.stderr.log</string>
 </dict>
 </plist>
 EOF
@@ -77,6 +77,6 @@ echo
 echo "✓ launchd agent installed and started!"
 echo "  The fetcher will now run every 15 minutes."
 echo
-echo "  To check status:  launchctl list | grep garminwidget"
-echo "  To view logs:     cat /tmp/garmin-widget-fetcher.stdout.log"
+echo "  To check status:  launchctl list | grep bodily"
+echo "  To view logs:     cat /tmp/bodily-fetcher.stdout.log"
 echo "  To uninstall:     launchctl unload $PLIST_DEST && rm $PLIST_DEST"

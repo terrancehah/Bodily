@@ -30,7 +30,7 @@ class AppViewModel: ObservableObject {
     @Published var accountEmail: String = ""
     @Published var accountProfileImageURL: String = ""
     @Published var accountDeviceName: String = ""
-    /// Whether the launchd fetcher agent (com.garminwidget.fetcher) is currently loaded
+    /// Whether the launchd fetcher agent (com.bodily.fetcher) is currently loaded
     @Published var fetcherRunning: Bool = false
     /// True while the account-info script is refreshing profile data in the background
     @Published var isRefreshingAccountInfo: Bool = false
@@ -49,7 +49,7 @@ class AppViewModel: ObservableObject {
     private let savedDeviceNameKey = "bodily.savedDeviceName"
 
     /// launchd label of the background fetcher agent (must match the installed plist)
-    private let fetcherAgentLabel = "com.garminwidget.fetcher"
+    private let fetcherAgentLabel = "com.bodily.fetcher"
 
     /// UserDefaults key for the customized metric grid (ordered raw value array)
     private let visibleMetricsKey = "bodily.visibleMetrics"
@@ -499,9 +499,9 @@ class AppViewModel: ObservableObject {
             <key>RunAtLoad</key>
             <true/>
             <key>StandardOutPath</key>
-            <string>/tmp/garmin-widget-fetcher.stdout.log</string>
+            <string>/tmp/bodily-fetcher.stdout.log</string>
             <key>StandardErrorPath</key>
-            <string>/tmp/garmin-widget-fetcher.stderr.log</string>
+            <string>/tmp/bodily-fetcher.stderr.log</string>
         </dict>
         </plist>
         """
