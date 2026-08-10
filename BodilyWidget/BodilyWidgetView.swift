@@ -60,9 +60,9 @@ struct BodilyWidgetView: View {
             }
             .padding(.bottom, 4)
 
+            // Center the grid vertically in the remaining space
             Spacer(minLength: 0)
 
-            // Metric grid — 3 columns, vertically centered in the remaining space
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
                 spacing: rowSpacing
@@ -81,6 +81,7 @@ struct BodilyWidgetView: View {
 
             Spacer(minLength: 0)
         }
+        .frame(maxHeight: .infinity)
         .padding(16)
     }
     
