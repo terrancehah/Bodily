@@ -106,61 +106,87 @@ struct MetricTile: View {
     var format: String = "%.0f"
     var unit: String = ""
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            // Icon + color-coded value row — the value is the hero
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(BodilyPalette.secondaryText)
+    /// Gauge fill fraction — for text metrics like Training Status, derived from the level.
+    private var gaugeFraction: Double? {
+        if let value = metric.value {
+            return MetricStyling.gaugeFraction(type: type, value: value, level: metric.level, goal: metric.goal)
+        } else if metric.level != nil {
+            return MetricStyling.gaugeFraction(type: type, value: 0, level: metric.level)
+        }
+        return nil
+    }
 
-                if let value = metric.value {
-                    Text(MetricStyling.formattedValue(value, format: format) + unit)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: metric.level, goal: metric.goal))
-                } else if let level = metric.level {
-                    // Text metric (e.g. Training Status): the level word is the hero
-                    Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                } else {
-                    // No data available — show blank placeholder
-                    Text("--")
-                        .font(.system(size: 20, weight: .regular, design: .rounded))
+    /// Gauge fill color — for text metrics, uses the zone color of the level.
+    private var gaugeFillColor: Color? {
+        if let value = metric.value {
+            return MetricStyling.gaugeColor(type: type, value: value, level: metric.level, goal: metric.goal)
+        } else if let level = metric.level {
+            return MetricStyling.zoneColor(type: type, value: 0, level: level)
+        }
+        return nil
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Section 1: Readings + Details — flexible height, top-aligned so
+            // the value row always starts at the same position across tiles
+            VStack(alignment: .leading, spacing: 3) {
+                // Icon + color-coded value row — the value is the hero
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(BodilyPalette.secondaryText)
+
+                    if let value = metric.value {
+                        Text(MetricStyling.formattedValue(value, format: format) + unit)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: metric.level, goal: metric.goal))
+                    } else if let level = metric.level {
+                        // Text metric (e.g. Training Status): the level word is the hero
+                        Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    } else {
+                        // No data available — show blank placeholder
+                        Text("--")
+                            .font(.system(size: 20, weight: .regular, design: .rounded))
+                            .foregroundStyle(BodilyPalette.tertiaryText)
+                    }
+                }
+
+                // Secondary detail line: sleep duration or training load status.
+                // Collapses to zero height when absent — no reserved space.
+                if let detail = metric.detail {
+                    Text(detail)
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
                         .foregroundStyle(BodilyPalette.tertiaryText)
+                        .lineLimit(1)
+                } else if let value = metric.value, let level = metric.level {
+                    // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
+                    Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
+                        .lineLimit(1)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            // Secondary detail line: sleep duration or training load status
-            if let detail = metric.detail {
-                Text(detail)
-                    .font(.system(size: 8, weight: .medium, design: .rounded))
-                    .foregroundStyle(BodilyPalette.tertiaryText)
-                    .lineLimit(1)
-            } else if let value = metric.value, let level = metric.level {
-                // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
-                Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
-                    .font(.system(size: 8, weight: .medium, design: .rounded))
-                    .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
-                    .lineLimit(1)
-            }
+            // Section 2: GaugeBar — always present so every tile has the same
+            // structural rhythm. Text metrics like Training Status get a fill
+            // derived from their status level.
+            GaugeBar(fraction: gaugeFraction, fillColor: gaugeFillColor)
+                .padding(.top, 4)
 
-            // Gauge: slate track with a zone-colored fill; green when the metric is excellent
-            GaugeBar(
-                fraction: metric.value.map { MetricStyling.gaugeFraction(type: type, value: $0, goal: metric.goal) },
-                fillColor: metric.value.map { MetricStyling.gaugeColor(type: type, value: $0, level: metric.level, goal: metric.goal) }
-            )
-
-            // Metric label in tracked small-caps + optional "last updated" date
+            // Section 3: Title — pinned to the bottom so labels align across
+            // every tile in a row regardless of detail-line presence
             HStack(spacing: 2) {
                 Text(label.uppercased())
                     .font(.system(size: 8, weight: .medium))
                     .tracking(0.6)
                     .foregroundStyle(BodilyPalette.secondaryText)
                     .lineLimit(1)
-//                    .minimumScaleFactor(0.7)
 
                 // Show source date if data is not from today
                 if let updatedLabel = metric.lastUpdatedLabel {

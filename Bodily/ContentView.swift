@@ -324,10 +324,10 @@ struct ContentView: View {
             
             Spacer()
             
-            // Account button (when connected) or Login button (when not connected)
+            // Settings button (when connected) or Login button (when not connected)
             if viewModel.hasExistingAuth {
                 Button(action: { showAccountSheet = true }) {
-                    Label("Account", systemImage: "person.crop.circle")
+                    Label("Settings", systemImage: "gearshape")
                         .font(.system(size: 11, weight: .medium))
                 }
                 .buttonStyle(.bordered)
@@ -363,68 +363,92 @@ struct MetricCard: View {
         return base + Text(" · \(updatedLabel.uppercased())").foregroundStyle(BodilyPalette.tertiaryText)
     }
 
-    var body: some View {
-        VStack(spacing: 5) {
-            // Icon + color-coded value — the value is the hero
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(BodilyPalette.secondaryText)
+    /// Gauge fill fraction — for text metrics like Training Status, derived from the level.
+    private var gaugeFraction: Double? {
+        if let value = metric.value {
+            return MetricStyling.gaugeFraction(type: type, value: value, level: metric.level, goal: metric.goal)
+        } else if metric.level != nil {
+            return MetricStyling.gaugeFraction(type: type, value: 0, level: metric.level)
+        }
+        return nil
+    }
 
-                if let value = metric.value {
-                    Text(MetricStyling.formattedValue(value, format: format) + unit)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: metric.level, goal: metric.goal))
-                } else if let level = metric.level {
-                    // Text metric (e.g. Training Status): the level word is the hero
-                    Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                } else {
-                    Text("--")
-                        .font(.system(size: 22, weight: .regular, design: .rounded))
+    /// Gauge fill color — for text metrics, uses the zone color of the level.
+    private var gaugeFillColor: Color? {
+        if let value = metric.value {
+            return MetricStyling.gaugeColor(type: type, value: value, level: metric.level, goal: metric.goal)
+        } else if let level = metric.level {
+            return MetricStyling.zoneColor(type: type, value: 0, level: level)
+        }
+        return nil
+    }
+
+    var body: some View {
+        VStack(spacing: 1) {
+            
+            // Section 1: Readings + Details — flexible height, top-aligned so
+            // the value row always starts at the same position across cards
+            VStack(alignment: .center, spacing: 0) {
+                // Icon + color-coded value — the value is the hero
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(BodilyPalette.secondaryText)
+
+                    if let value = metric.value {
+                        Text(MetricStyling.formattedValue(value, format: format) + unit)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: metric.level, goal: metric.goal))
+                    } else if let level = metric.level {
+                        // Text metric (e.g. Training Status): the level word is the hero
+                        Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    } else {
+                        Text("--")
+                            .font(.system(size: 22, weight: .regular, design: .rounded))
+                            .foregroundStyle(BodilyPalette.tertiaryText)
+                    }
+                }
+
+                // Secondary detail line: sleep duration or training load status.
+                // Collapses to zero height when absent — no reserved space.
+                if let detail = metric.detail {
+                    Text(detail)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(BodilyPalette.tertiaryText)
+                        .lineLimit(1)
+                    
+                } else if let value = metric.value, let level = metric.level {
+                    // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
+                    Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
+                        .lineLimit(1)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Secondary detail line: sleep duration or training load status
-            if let detail = metric.detail {
-                Text(detail)
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(BodilyPalette.tertiaryText)
-                    .lineLimit(1)
-            } else if let value = metric.value, let level = metric.level {
-                // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
-                Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
-                    .lineLimit(1)
-            }
-
-            // Gauge: slate track with zone-colored fill; green when excellent.
-            // Hidden for text metrics — a numeric gauge means nothing there.
-            if metric.value != nil || metric.level == nil {
-                GaugeBar(
-                    fraction: metric.value.map { MetricStyling.gaugeFraction(type: type, value: $0, goal: metric.goal) },
-                    fillColor: metric.value.map { MetricStyling.gaugeColor(type: type, value: $0, level: metric.level, goal: metric.goal) },
-                    height: 3
-                )
+            // Section 2: GaugeBar — always present so every card has the same
+            // structural rhythm. Text metrics like Training Status get a fill
+            // derived from their status level.
+            GaugeBar(fraction: gaugeFraction, fillColor: gaugeFillColor, height: 3)
                 .padding(.horizontal, 10)
-                .padding(.top, 2)
-                .padding(.bottom, 3)
-            }
+                .padding(.top, 6)
 
-            // Metric title in tracked small-caps, with any stale date inline
+            // Section 3: Title — pinned to the bottom so labels align across
+            // every card in a row regardless of detail-line presence
             titleText
                 .font(.system(size: 8, weight: .medium))
                 .tracking(0.7)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .padding(.top, 4)
         }
-        .frame(maxWidth: .infinity, minHeight: 86)
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
         .padding(.horizontal, 4)
         // Slate-tinted fill with a hairline border — instrument panel, not gray box
         .background(RoundedRectangle(cornerRadius: 10).fill(BodilyPalette.cardFill))

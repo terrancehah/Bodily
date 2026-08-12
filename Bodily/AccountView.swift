@@ -24,7 +24,7 @@ struct AccountView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header bar
             HStack {
-                Text("ACCOUNT")
+                Text("SETTINGS")
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .tracking(1.2)
                 Spacer()
@@ -55,6 +55,35 @@ struct AccountView: View {
 
                 if let lastUpdate = viewModel.lastUpdateTime {
                     infoRow(icon: "arrow.triangle.2.circlepath", label: "LAST SYNC", value: lastUpdate)
+                }
+
+                // Theme picker: system / light / dark
+                HStack(spacing: 8) {
+                    Image(systemName: viewModel.themeMode.icon)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(BodilyPalette.secondaryText)
+                        .frame(width: 16)
+
+                    Text("THEME")
+                        .font(.system(size: 9, weight: .medium))
+                        .tracking(0.7)
+                        .foregroundStyle(BodilyPalette.tertiaryText)
+                        .frame(width: 70, alignment: .leading)
+
+                    Picker("Theme", selection: Binding(
+                        get: { viewModel.themeMode },
+                        set: { viewModel.setTheme($0) }
+                    )) {
+                        ForEach(ThemeMode.allCases) { mode in
+                            Label(mode.displayName, systemImage: mode.icon)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: 120, alignment: .leading)
+
+                    Spacer()
                 }
             }
             .padding(.bottom, 16)

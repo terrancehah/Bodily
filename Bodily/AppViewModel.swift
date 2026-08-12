@@ -12,6 +12,31 @@ enum LoginState: Equatable {
     case error(String)
 }
 
+/// App theme mode: follow system setting, or force light/dark.
+enum ThemeMode: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .system: return "circle.lefthalf.filled"
+        case .light: return "sun.max.fill"
+        case .dark: return "moon.fill"
+        }
+    }
+}
+
 /// ViewModel for the host app's main content view.
 /// Manages loading metrics, checking connection status, and triggering actions.
 class AppViewModel: ObservableObject {
@@ -38,6 +63,8 @@ class AppViewModel: ObservableObject {
     @Published var isSettingUpEnvironment: Bool = false
     /// Ordered list of metrics shown in the main grid — user-customizable via the drawer
     @Published var visibleMetrics: [MetricID] = MetricID.defaultVisible
+    /// Current theme mode: system, light, or dark
+    @Published var themeMode: ThemeMode = .system
 
     /// UserDefaults keys for persisting saved login credentials and account info
     private let savedEmailKey = "bodily.savedEmail"
@@ -53,6 +80,8 @@ class AppViewModel: ObservableObject {
 
     /// UserDefaults key for the customized metric grid (ordered raw value array)
     private let visibleMetricsKey = "bodily.visibleMetrics"
+    /// UserDefaults key for the theme mode preference
+    private let themeModeKey = "bodily.themeMode"
 
     /// Grid capacity — 9 tiles so the large widget (3×3) can show the full selection
     static let maxVisibleMetrics = 9
@@ -154,6 +183,8 @@ class AppViewModel: ObservableObject {
         loadSavedEmail()
         checkExistingAuth()
         loadVisibleMetrics()
+        loadTheme()
+        applyTheme()
     }
 
     // MARK: - Metric Grid Customization
@@ -183,6 +214,34 @@ class AppViewModel: ObservableObject {
     /// Called when a drag finishes or customize mode closes — not on every hover move.
     func reloadWidgetTimelines() {
         WidgetCenter.shared.reloadTimelines(ofKind: "BodilyWidget")
+    }
+
+    // MARK: - Theme
+
+    /// Restores the saved theme preference, defaulting to system.
+    private func loadTheme() {
+        guard let rawValue = UserDefaults.standard.string(forKey: themeModeKey),
+              let mode = ThemeMode(rawValue: rawValue) else { return }
+        themeMode = mode
+    }
+
+    /// Persists the current theme preference and applies it to the app window.
+    func setTheme(_ mode: ThemeMode) {
+        themeMode = mode
+        UserDefaults.standard.set(mode.rawValue, forKey: themeModeKey)
+        applyTheme()
+    }
+
+    /// Overrides NSApp.appearance to match the selected theme mode.
+    private func applyTheme() {
+        switch themeMode {
+        case .system:
+            NSApp.appearance = nil
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     /// Moves a metric to sit just before another one in the grid.

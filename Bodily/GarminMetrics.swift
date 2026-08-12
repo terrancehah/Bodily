@@ -145,12 +145,18 @@ enum MetricStyling {
             if value <= 60 { return .orange }
             return .red
 
-        // Training Status: text metric, color from the status level
+        // Training Status: text metric, color from the status level.
+        // Garmin defines 8 statuses ranked from best to worst:
+        // Peaking > Productive > Maintaining > Recovery > Strained > Unproductive > Overreaching > Detraining
         case .trainingStatus:
             switch level?.uppercased() {
-            case "PRODUCTIVE", "PEAKING": return .green
-            case "RECOVERY", "MAINTAINING": return .yellow
-            case "UNPRODUCTIVE", "OVERREACHING": return .orange
+            case "PEAKING": return .green
+            case "PRODUCTIVE": return .green
+            case "MAINTAINING": return .yellow
+            case "RECOVERY": return .mint
+            case "STRAINED": return .orange
+            case "UNPRODUCTIVE": return .orange
+            case "OVERREACHING": return .orange
             case "DETRAINING": return .red
             default: return .primary  // Unknown status — keep neutral
             }
@@ -233,7 +239,7 @@ enum MetricStyling {
     /// Normalized gauge fill fraction (0...1) showing where the value sits in its scale.
     /// Scales use practical maxima: 100-point metrics map directly, VO2 Max tops out ~80,
     /// and HRV (ms) tops out around 150 for most athletes.
-    static func gaugeFraction(type: MetricType, value: Double, goal: Double? = nil) -> Double {
+    static func gaugeFraction(type: MetricType, value: Double, level: String? = nil, goal: Double? = nil) -> Double {
         switch type {
         // Lower-is-better scales: fill grows as the value improves
         case .fitnessAge:
@@ -241,7 +247,19 @@ enum MetricStyling {
         case .restingHR:
             return min(max((100 - value) / 60, 0), 1)  // 40-100 scale
         case .trainingStatus:
-            return 0  // Text metric — no meaningful fill
+            // Map Garmin's 8 status levels to a 0–1 gauge fill.
+            // Peaking (best) = 1.0, Detraining (worst) = 0.0.
+            switch level?.uppercased() {
+            case "PEAKING": return 1.0
+            case "PRODUCTIVE": return 0.85
+            case "MAINTAINING": return 0.65
+            case "RECOVERY": return 0.50
+            case "STRAINED": return 0.35
+            case "UNPRODUCTIVE": return 0.25
+            case "OVERREACHING": return 0.12
+            case "DETRAINING": return 0.0
+            default: return 0
+            }
         case .stepsToday:
             // Fills against the user's own step goal (10k only as a fallback)
             return min(max(value / (goal ?? 10000), 0), 1)
