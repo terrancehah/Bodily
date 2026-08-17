@@ -82,7 +82,7 @@ struct LoginView: View {
                 }
             }
             
-            // Remember login toggle — persists email and password via UserDefaults
+            // Remember login toggle — persists email via UserDefaults, password via Keychain
             Toggle("Remember login", isOn: $rememberMe)
                 .font(.system(size: 11))
                 .controlSize(.small)

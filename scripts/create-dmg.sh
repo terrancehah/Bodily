@@ -8,12 +8,16 @@
 # Usage:
 #   ./scripts/create-dmg.sh
 #
+# Environment variables (optional, for CI version injection):
+#   MARKETING_VERSION      e.g. "1.0.0" — overrides CFBundleShortVersionString
+#   CURRENT_PROJECT_VERSION e.g. "4"    — overrides CFBundleVersion
+#
 # Prerequisites:
 #   - Xcode with the Bodily project open (or scheme built once)
-#   - The "Copy Fetcher Scripts" build phase must be added (see below)
+#   - The "Copy Fetcher Scripts" build phase must be added
 #
 # Output:
-#   build/Bodily.dmg
+#   build/Bodily-<version>.dmg  (or build/Bodily.dmg if no version set)
 # ============================================================
 
 set -e
@@ -22,7 +26,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
 APP_NAME="Bodily"
-DMG_NAME="${APP_NAME}.dmg"
+
+# Version-aware DMG filename: Bodily-1.0.0.dmg when MARKETING_VERSION is set
+VERSION_SUFFIX="${MARKETING_VERSION:+-${MARKETING_VERSION}}"
+DMG_NAME="${APP_NAME}${VERSION_SUFFIX}.dmg"
 ARCHIVE_PATH="${BUILD_DIR}/${APP_NAME}.xcarchive"
 APP_PATH="${BUILD_DIR}/${APP_NAME}.app"
 DMG_PATH="${BUILD_DIR}/${DMG_NAME}"
@@ -35,8 +42,19 @@ echo "1. Cleaning build directory..."
 rm -rf "${BUILD_DIR}"
 mkdir -p "${BUILD_DIR}"
 
-# Step 2: Archive the app in Release configuration
+# Step 2: Archive the app in Release configuration.
+# Build version overrides from environment (used by CI to inject git tag version).
 echo "2. Archiving ${APP_NAME} (Release)..."
+XCODEBUILD_VERSION_FLAGS=()
+if [ -n "${MARKETING_VERSION}" ]; then
+    XCODEBUILD_VERSION_FLAGS+=("MARKETING_VERSION=${MARKETING_VERSION}")
+    echo "   Version override: MARKETING_VERSION=${MARKETING_VERSION}"
+fi
+if [ -n "${CURRENT_PROJECT_VERSION}" ]; then
+    XCODEBUILD_VERSION_FLAGS+=("CURRENT_PROJECT_VERSION=${CURRENT_PROJECT_VERSION}")
+    echo "   Build override: CURRENT_PROJECT_VERSION=${CURRENT_PROJECT_VERSION}"
+fi
+
 xcodebuild archive \
     -project "${PROJECT_DIR}/Bodily.xcodeproj" \
     -scheme "${APP_NAME}" \
@@ -46,6 +64,7 @@ xcodebuild archive \
     CODE_SIGN_IDENTITY="" \
     CODE_SIGNING_REQUIRED=NO \
     CODE_SIGNING_ALLOWED=NO \
+    "${XCODEBUILD_VERSION_FLAGS[@]}" \
     | grep -v "^note:" | grep -v "^warning:" || true
 
 echo "   Archive created at: ${ARCHIVE_PATH}"

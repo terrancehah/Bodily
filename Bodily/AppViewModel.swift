@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import SwiftUI
 import WidgetKit
+import Security
 
 /// Tracks the current state of the Garmin Connect login flow.
 enum LoginState: Equatable {
@@ -66,9 +67,9 @@ class AppViewModel: ObservableObject {
     /// Current theme mode: system, light, or dark
     @Published var themeMode: ThemeMode = .system
 
-    /// UserDefaults keys for persisting saved login credentials and account info
+    /// UserDefaults keys for persisting saved login credentials and account info.
+    /// Password is stored in the macOS Keychain (see keychainService), not UserDefaults.
     private let savedEmailKey = "bodily.savedEmail"
-    private let savedPasswordKey = "bodily.savedPassword"
     private let savedDisplayNameKey = "bodily.savedDisplayName"
     private let savedFullNameKey = "bodily.savedFullName"
     private let savedAccountEmailKey = "bodily.savedAccountEmail"
@@ -466,6 +467,57 @@ class AppViewModel: ObservableObject {
         NSWorkspace.shared.open(URL(fileURLWithPath: configDirectoryPath))
     }
 
+    // MARK: - Keychain Credential Storage
+
+    /// Service name used to identify Bodily entries in the macOS Keychain.
+    private let keychainService = "com.bodily.garmin"
+
+    /// Saves the Garmin Connect password to the macOS Keychain.
+    /// Deletes any existing entry for the same email first to avoid duplicates.
+    private func savePasswordToKeychain(_ password: String, forEmail email: String) {
+        deletePasswordFromKeychain(forEmail: email)
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: email,
+            kSecValueData as String: Data(password.utf8),
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
+        ]
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            print("[AppViewModel] Keychain save failed: \(status)")
+        }
+    }
+
+    /// Loads the Garmin Connect password from the macOS Keychain for a given email.
+    /// Returns nil if no matching entry exists or retrieval fails.
+    private func loadPasswordFromKeychain(forEmail email: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: email,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// Deletes the Garmin Connect password from the macOS Keychain for a given email.
+    /// Safe to call even if no entry exists (SecItemDelete is a no-op in that case).
+    private func deletePasswordFromKeychain(forEmail email: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: email,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
     // MARK: - Environment Setup
 
     /// Ensures the Python venv with garminconnect exists and the launchd agent is
@@ -561,6 +613,12 @@ class AppViewModel: ObservableObject {
             <string>/tmp/bodily-fetcher.stdout.log</string>
             <key>StandardErrorPath</key>
             <string>/tmp/bodily-fetcher.stderr.log</string>
+            <!-- Restart immediately if the fetcher exits with an error (API change, network failure, etc.) -->
+            <key>KeepAlive</key>
+            <dict>
+                <key>SuccessfulExit</key>
+                <false/>
+            </dict>
         </dict>
         </plist>
         """
@@ -588,10 +646,14 @@ class AppViewModel: ObservableObject {
     
     // MARK: - Login
     
-    /// Loads saved login credentials and account info from UserDefaults.
+    /// Loads saved login credentials and account info.
+    /// Email comes from UserDefaults; password is retrieved from the macOS Keychain.
     func loadSavedEmail() {
         savedEmail = UserDefaults.standard.string(forKey: savedEmailKey) ?? ""
-        savedPassword = UserDefaults.standard.string(forKey: savedPasswordKey) ?? ""
+        // Load password from Keychain using the saved email as the account identifier
+        if !savedEmail.isEmpty {
+            savedPassword = loadPasswordFromKeychain(forEmail: savedEmail) ?? ""
+        }
         accountDisplayName = UserDefaults.standard.string(forKey: savedDisplayNameKey) ?? ""
         accountFullName = UserDefaults.standard.string(forKey: savedFullNameKey) ?? ""
         accountEmail = UserDefaults.standard.string(forKey: savedAccountEmailKey) ?? ""
@@ -786,13 +848,14 @@ class AppViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch status {
                 case "success":
-                    // Persist or clear login credentials based on "Remember login" toggle
+                    // Persist or clear login credentials based on "Remember login" toggle.
+                    // Email is stored in UserDefaults; password is stored in the macOS Keychain.
                     if rememberMe && !email.isEmpty {
                         UserDefaults.standard.set(email, forKey: self.savedEmailKey)
-                        UserDefaults.standard.set(password, forKey: self.savedPasswordKey)
+                        self.savePasswordToKeychain(password, forEmail: email)
                     } else if !email.isEmpty {
                         UserDefaults.standard.removeObject(forKey: self.savedEmailKey)
-                        UserDefaults.standard.removeObject(forKey: self.savedPasswordKey)
+                        self.deletePasswordFromKeychain(forEmail: email)
                     }
                     // Save account info from login response
                     let displayName = response["display_name"] as? String ?? email
@@ -881,9 +944,12 @@ class AppViewModel: ObservableObject {
         let tokenStorePath = "\(home)/.garminconnect"
         try? FileManager.default.removeItem(atPath: "\(tokenStorePath)/config.json")
         try? FileManager.default.removeItem(atPath: "\(tokenStorePath)/garmin_tokens.json")
-        // Clear cached credentials and account info from UserDefaults
+        // Clear cached credentials and account info.
+        // Password is removed from Keychain; email and profile info from UserDefaults.
         UserDefaults.standard.removeObject(forKey: savedEmailKey)
-        UserDefaults.standard.removeObject(forKey: savedPasswordKey)
+        if !savedEmail.isEmpty {
+            deletePasswordFromKeychain(forEmail: savedEmail)
+        }
         UserDefaults.standard.removeObject(forKey: savedDisplayNameKey)
         UserDefaults.standard.removeObject(forKey: savedFullNameKey)
         UserDefaults.standard.removeObject(forKey: savedAccountEmailKey)

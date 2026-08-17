@@ -105,6 +105,10 @@ MIT — see [LICENSE](LICENSE).
 ## Notes
 
 - This uses the unofficial `python-garminconnect` library. Garmin may change their API without notice.
-- Credentials are stored locally in `~/.garminconnect/` with restricted permissions.
+- Credentials are stored locally in `~/.garminconnect/` with restricted permissions; the Garmin password is stored in the macOS Keychain.
 - The widget refreshes every ~15 minutes, which is appropriate for recovery metrics that change slowly.
 - The companion app uses a cooldown-based drag-and-drop mechanism to prevent card jumping during reordering.
+- Auto-updates are powered by [Sparkle](https://sparkle-project.org/). To enable EdDSA-signed updates:
+    1. Generate keys: `openssl genpkey -algorithm ed25519 -out sparkle_private.pem`
+    2. Add the private key as a GitHub Actions secret named `SPARKLE_PRIVATE_KEY`
+    3. The CI workflow will sign each release automatically
