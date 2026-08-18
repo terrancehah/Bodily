@@ -16,15 +16,13 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
 
             - name: Extract version from tag
               id: version
               run: |
                   VERSION="${GITHUB_REF_NAME#v}"
                   echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
-                  echo "Detected version: ${VERSION}"
+                  echo "Version: ${VERSION}"
 
             - name: Build DMG
               env:
@@ -33,56 +31,7 @@ jobs:
               run: |
                   chmod +x scripts/create-dmg.sh
                   ./scripts/create-dmg.sh
-
-            - name: Install Python dependencies for appcast signing
-              run: pip3 install cryptography
-
-            - name: Set up Sparkle private key
-              id: sparkle-key
-              run: |
-                  if [ -n "${{ secrets.SPARKLE_PRIVATE_KEY }}" ]; then
-                    echo "${{ secrets.SPARKLE_PRIVATE_KEY }}" > sparkle_private.pem
-                    chmod 600 sparkle_private.pem
-                    echo "has-key=true" >> "${GITHUB_OUTPUT}"
-                    echo "Sparkle private key configured"
-                  else
-                    echo "has-key=false" >> "${GITHUB_OUTPUT}"
-                    echo "No SPARKLE_PRIVATE_KEY secret — skipping EdDSA signing"
-                  fi
-
-            - name: Generate Sparkle appcast
-              run: |
-                  DMG_FILE="build/Bodily-${{ steps.version.outputs.version }}.dmg"
-                  DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Bodily-${{ steps.version.outputs.version }}.dmg"
-                  chmod +x scripts/generate-appcast.py
-
-                  KEY_ARG=""
-                  if [ "${{ steps.sparkle-key.outputs.has-key }}" = "true" ]; then
-                    KEY_ARG="--private-key sparkle_private.pem"
-                  fi
-
-                  python3 scripts/generate-appcast.py \
-                    --version "${{ steps.version.outputs.version }}" \
-                    --build "${{ github.run_number }}" \
-                    --dmg "${DMG_FILE}" \
-                    --download-url "${DOWNLOAD_URL}" \
-                    --appcast appcast.xml \
-                    --release-notes "See [release notes](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})." \
-                    ${KEY_ARG}
-
-            - name: Commit updated appcast.xml
-              run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
-                  # Switch to main branch so git push has a target
-                  git checkout main
-                  git add appcast.xml
-                  if git diff --cached --quiet; then
-                    echo "No changes to appcast.xml"
-                  else
-                    git commit -m "Update appcast for v${{ steps.version.outputs.version }}"
-                    git push origin main
-                  fi
+              timeout-minutes: 20
 
             - name: Create GitHub Release
               uses: softprops/action-gh-release@v2
