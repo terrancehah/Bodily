@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  launchd agent for Bodily Fetcher
-  Runs the Python fetcher script every 900 seconds (15 minutes)
-  to keep widget data fresh.
-  
-  Install: cp this file to ~/Library/LaunchAgents/ then:
-    launchctl load ~/Library/LaunchAgents/com.bodily.fetcher.plist
-  
+  launchd agent for Bodily Fetcher — DEVELOPER REFERENCE ONLY
+
+  This file documents the launchd configuration. End users do NOT need
+  to install this manually — the Bodily app auto-generates and loads the
+  correct plist on first launch (see AppViewModel.installLaunchAgent()).
+
+  The auto-generated plist uses:
+    - The app-managed venv Python at ~/Library/Application Support/Bodily/venv/bin/python3
+    - The bundled fetcher script inside the .app bundle
+    - Includes KeepAlive for crash recovery
+
+  Manual install (development only):
+    cp this file to ~/Library/LaunchAgents/ then:
+      launchctl load ~/Library/LaunchAgents/com.bodily.fetcher.plist
+
   Uninstall:
     launchctl unload ~/Library/LaunchAgents/com.bodily.fetcher.plist
 -->

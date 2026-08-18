@@ -32,6 +32,10 @@ fetcher/garmin_metrics.json
 # Logs
 *.log
 
+# Sparkle private key (generated locally, must never be committed)
+sparkle_private.pem
+sparkle_public.pem
+
 # IDE
 *.swp
 *.swo

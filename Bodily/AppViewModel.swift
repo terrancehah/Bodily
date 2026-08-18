@@ -102,21 +102,33 @@ class AppViewModel: ObservableObject {
     
     // MARK: - Path Resolution
 
-    /// Resolves the path to a bundled fetcher script, falling back to the
-    /// Xcode project directory during development (Bundle resources are only
-    /// populated when the app is archived/run as a standalone .app).
+    /// Resolves the path to a bundled fetcher script.
+    /// In production (archived .app) the scripts live in Resources/fetcher/.
+    /// During development (running from Xcode) they are copied there by the
+    /// build phase, so the bundle path always takes priority. The fallback
+    /// checks common project locations in case the build phase hasn't run yet.
     private func scriptPath(_ filename: String) -> String {
-        // Production: scripts are copied into Resources/fetcher/ by the build phase
+        // Primary: scripts copied into the app bundle by the build phase
         if let resourcePath = Bundle.main.resourcePath {
             let bundled = "\(resourcePath)/fetcher/\(filename)"
             if FileManager.default.fileExists(atPath: bundled) {
                 return bundled
             }
         }
-        // Development fallback: look in the Xcode project directory
+        // Development fallbacks: check common project locations on disk.
+        // Ordered from most likely to least likely for the current setup.
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let devPath = "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/\(filename)"
-        return devPath
+        let devCandidates = [
+            "\(home)/Documents/Bodily/fetcher/\(filename)",
+            "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/\(filename)",
+        ]
+        for candidate in devCandidates {
+            if FileManager.default.fileExists(atPath: candidate) {
+                return candidate
+            }
+        }
+        // Last resort: return the most likely path so the error message is meaningful
+        return devCandidates[0]
     }
 
     /// Path to the Python fetcher script

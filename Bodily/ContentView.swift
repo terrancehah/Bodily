@@ -420,7 +420,6 @@ struct MetricCard: View {
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(BodilyPalette.tertiaryText)
                         .lineLimit(1)
-                    
                 } else if let value = metric.value, let level = metric.level {
                     // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
                     Text(level.replacingOccurrences(of: "_", with: " ").capitalized)

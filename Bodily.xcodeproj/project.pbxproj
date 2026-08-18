@@ -518,11 +518,7 @@
 				DEVELOPMENT_TEAM = DS4RKND45B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BodilyWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bodily Widget";
-				INFOPLIST_KEY_NSExtensionPrincipalClass = BodilyWidget.BodilyWidgetBundle;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -557,11 +553,7 @@
 				DEVELOPMENT_TEAM = DS4RKND45B;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BodilyWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bodily Widget";
-				INFOPLIST_KEY_NSExtensionPrincipalClass = BodilyWidget.BodilyWidgetBundle;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

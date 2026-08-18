@@ -35,7 +35,7 @@ struct BodilyWidgetView: View {
     
     /// Vertical spacing between grid rows — tighter for medium, roomier for large
     private var rowSpacing: CGFloat {
-        family == .systemLarge ? 14 : 8
+        family == .systemLarge ? 16 : 8
     }
     
     var body: some View {
@@ -64,7 +64,7 @@ struct BodilyWidgetView: View {
             Spacer(minLength: 0)
 
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3),
+                columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3),
                 spacing: rowSpacing
             ) {
                 ForEach(selection) { metricID in
@@ -125,12 +125,13 @@ struct MetricTile: View {
         }
         return nil
     }
-
+    
+    /// body for the metric tiles/cards.
     var body: some View {
         VStack(spacing: 0) {
-            // Section 1: Readings + Details — flexible height, top-aligned so
+            // Section 1: Readings + Details — flexible height,
             // the value row always starts at the same position across tiles
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .center, spacing: 0) {
                 // Icon + color-coded value row — the value is the hero
                 HStack(spacing: 4) {
                     Image(systemName: icon)
@@ -144,14 +145,14 @@ struct MetricTile: View {
                     } else if let level = metric.level {
                         // Text metric (e.g. Training Status): the level word is the hero
                         Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .foregroundStyle(MetricStyling.zoneColor(type: type, value: 0, level: level))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     } else {
                         // No data available — show blank placeholder
                         Text("--")
-                            .font(.system(size: 20, weight: .regular, design: .rounded))
+                            .font(.system(size: 22, weight: .regular, design: .rounded))
                             .foregroundStyle(BodilyPalette.tertiaryText)
                     }
                 }
@@ -160,24 +161,24 @@ struct MetricTile: View {
                 // Collapses to zero height when absent — no reserved space.
                 if let detail = metric.detail {
                     Text(detail)
-                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(BodilyPalette.tertiaryText)
                         .lineLimit(1)
                 } else if let value = metric.value, let level = metric.level {
                     // Metrics with both a numeric value and a level (e.g. Training Readiness, Training Load)
                     Text(level.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.system(size: 8, weight: .medium, design: .rounded))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(MetricStyling.zoneColor(type: type, value: value, level: level))
                         .lineLimit(1)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Section 2: GaugeBar — always present so every tile has the same
             // structural rhythm. Text metrics like Training Status get a fill
             // derived from their status level.
             GaugeBar(fraction: gaugeFraction, fillColor: gaugeFillColor)
-                .padding(.top, 4)
+                .padding(.top, 5)
 
             // Section 3: Title — pinned to the bottom so labels align across
             // every tile in a row regardless of detail-line presence
@@ -202,18 +203,6 @@ struct MetricTile: View {
 }
 
 
-// MARK: - Widget Preview
-
-#Preview("Medium", as: .systemMedium) {
-    BodilyWidget()
-} timeline: {
-    BodilyMetricsEntry(date: Date(), metrics: .placeholder, isStale: false)
-    BodilyMetricsEntry(date: Date(), metrics: .unavailable, isStale: true)
-}
-
-#Preview("Large", as: .systemLarge) {
-    BodilyWidget()
-} timeline: {
-    BodilyMetricsEntry(date: Date(), metrics: .placeholder, isStale: false)
-    BodilyMetricsEntry(date: Date(), metrics: .unavailable, isStale: true)
-}
+// Widget previews on macOS use the WidgetKit Simulator, not Xcode Canvas.
+// To preview: select the "BodilyWidget" scheme, then Product > Run (⌘R).
+// This launches the WidgetKit Simulator with the configured family and timeline.

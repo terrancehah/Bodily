@@ -90,9 +90,13 @@ Bodily/
 ├── launchd/
 │   └── com.bodily.fetcher.plist          # LaunchAgent template
 ├── scripts/
-│   ├── install-launchd.sh                # LaunchAgent installer
+│   ├── install-launchd.sh                # LaunchAgent installer (deprecated)
 │   ├── copy-fetcher-to-resources.sh      # Xcode build phase script
-│   └── create-dmg.sh                     # DMG packaging script
+│   ├── create-dmg.sh                     # DMG packaging script
+│   └── generate-appcast.py               # Sparkle appcast generator
+├── .github/workflows/
+│   └── release.yml                       # CI/CD: build DMG + create GitHub Release
+├── appcast.xml                           # Sparkle update feed
 ├── .gitignore
 ├── LICENSE
 └── README.md

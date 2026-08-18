@@ -22,7 +22,6 @@ If --private-key is not provided, the item is added without a signature
 
 import argparse
 import base64
-import hashlib
 import os
 import sys
 from datetime import datetime, timezone
