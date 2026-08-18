@@ -1,17 +1,5 @@
 name: Release DMG
 
-# Builds a DMG, generates a Sparkle appcast, and creates a GitHub Release
-# whenever a version tag (v1.0.0, v2.3.1, etc.) is pushed.
-#
-# Prerequisites for auto-update (Sparkle EdDSA signing):
-#   1. Generate an Ed25519 key pair:
-#        openssl genpkey -algorithm ed25519 -out sparkle_private.pem
-#        openssl pkey -in sparkle_private.pem -pubout -out sparkle_public.pem
-#   2. Add the private key as a GitHub secret:
-#        gh secret set SPARKLE_PRIVATE_KEY < sparkle_private.pem
-#   Without the secret, releases will still build but won't include
-#   Sparkle signatures (users won't get auto-update prompts).
-
 on:
     push:
         tags:
@@ -28,6 +16,8 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
 
             - name: Extract version from tag
               id: version
@@ -57,45 +47,41 @@ jobs:
                     echo "Sparkle private key configured"
                   else
                     echo "has-key=false" >> "${GITHUB_OUTPUT}"
-                    echo "No SPARKLE_PRIVATE_KEY secret found — skipping EdDSA signing"
+                    echo "No SPARKLE_PRIVATE_KEY secret — skipping EdDSA signing"
                   fi
 
             - name: Generate Sparkle appcast
               run: |
                   DMG_FILE="build/Bodily-${{ steps.version.outputs.version }}.dmg"
                   DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Bodily-${{ steps.version.outputs.version }}.dmg"
-
                   chmod +x scripts/generate-appcast.py
 
+                  KEY_ARG=""
                   if [ "${{ steps.sparkle-key.outputs.has-key }}" = "true" ]; then
-                    python3 scripts/generate-appcast.py \
-                      --version "${{ steps.version.outputs.version }}" \
-                      --build "${{ github.run_number }}" \
-                      --dmg "${DMG_FILE}" \
-                      --download-url "${DOWNLOAD_URL}" \
-                      --private-key sparkle_private.pem \
-                      --appcast appcast.xml \
-                      --release-notes "See [release notes](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})."
-                  else
-                    python3 scripts/generate-appcast.py \
-                      --version "${{ steps.version.outputs.version }}" \
-                      --build "${{ github.run_number }}" \
-                      --dmg "${DMG_FILE}" \
-                      --download-url "${DOWNLOAD_URL}" \
-                      --appcast appcast.xml \
-                      --release-notes "See [release notes](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})."
+                    KEY_ARG="--private-key sparkle_private.pem"
                   fi
+
+                  python3 scripts/generate-appcast.py \
+                    --version "${{ steps.version.outputs.version }}" \
+                    --build "${{ github.run_number }}" \
+                    --dmg "${DMG_FILE}" \
+                    --download-url "${DOWNLOAD_URL}" \
+                    --appcast appcast.xml \
+                    --release-notes "See [release notes](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})." \
+                    ${KEY_ARG}
 
             - name: Commit updated appcast.xml
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
+                  # Switch to main branch so git push has a target
+                  git checkout main
                   git add appcast.xml
                   if git diff --cached --quiet; then
                     echo "No changes to appcast.xml"
                   else
                     git commit -m "Update appcast for v${{ steps.version.outputs.version }}"
-                    git push
+                    git push origin main
                   fi
 
             - name: Create GitHub Release
