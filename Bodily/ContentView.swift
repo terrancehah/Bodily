@@ -324,8 +324,13 @@ struct ContentView: View {
             
             Spacer()
             
-            // Settings button (when connected) or Login button (when not connected)
+            // Show login status: if already authenticated, display the email and Settings
             if viewModel.hasExistingAuth {
+                Text("Logged in as \(viewModel.accountEmail)")
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(BodilyPalette.tertiaryText)
+                    .lineLimit(1)
+                Spacer()
                 Button(action: { showAccountSheet = true }) {
                     Label("Settings", systemImage: "gearshape")
                         .font(.system(size: 11, weight: .medium))
@@ -333,6 +338,7 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             } else {
+                Spacer()
                 // Login is the primary CTA — volt fill with ink text
                 Button(action: { showLoginSheet = true }) {
                     Label("Login", systemImage: "person.badge.key")

@@ -136,40 +136,39 @@ struct LoginView: View {
                     .foregroundStyle(.green)
             }
             
-            // Action buttons
-            HStack {
-                Spacer()
-                
-                // Cancel button — stays enabled to allow cancellation during auth
-                Button("Cancel") {
-                    viewModel.resetLoginState()
-                    onDismiss()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(viewModel.loginState == .success)
-                
-                // Primary action changes based on login state
-                if viewModel.loginState == .mfaRequired {
-                    // Verify MFA button — submits the MFA code to the running process
-                    Button("Verify") {
-                        viewModel.submitMfaCode(mfaCode)
+            // Action buttons — hidden during authentication, replaced by progress indicator
+            if viewModel.loginState != .authenticating {
+                HStack {
+                    Spacer()
+                    
+                    // Cancel button
+                    Button("Cancel") {
+                        viewModel.resetLoginState()
+                        onDismiss()
                     }
-                    .buttonStyle(VoltButtonStyle())
-                    .disabled(mfaCode.isEmpty || viewModel.loginState == .authenticating)
-                } else if viewModel.loginState != .success {
-                    // Login button — initial attempt with email + password
-                    // Hidden after success (sheet auto-dismisses)
-                    Button("Login") {
-                        viewModel.login(
-                            email: email,
-                            password: password,
-                            mfaCode: nil,
-                            rememberMe: rememberMe
-                        )
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(viewModel.loginState == .success)
+                    
+                    // Primary action changes based on login state
+                    if viewModel.loginState == .mfaRequired {
+                        Button("Verify") {
+                            viewModel.submitMfaCode(mfaCode)
+                        }
+                        .buttonStyle(VoltButtonStyle())
+                        .disabled(mfaCode.isEmpty)
+                    } else if viewModel.loginState != .success {
+                        Button("Login") {
+                            viewModel.login(
+                                email: email,
+                                password: password,
+                                mfaCode: nil,
+                                rememberMe: rememberMe
+                            )
+                        }
+                        .buttonStyle(VoltButtonStyle())
+                        .disabled(email.isEmpty || password.isEmpty)
                     }
-                    .buttonStyle(VoltButtonStyle())
-                    .disabled(email.isEmpty || password.isEmpty || viewModel.loginState == .authenticating)
                 }
             }
         }

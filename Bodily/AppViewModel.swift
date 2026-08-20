@@ -3,6 +3,7 @@ import Combine
 import SwiftUI
 import WidgetKit
 import Security
+import Sparkle
 
 /// Tracks the current state of the Garmin Connect login flow.
 enum LoginState: Equatable {
@@ -103,32 +104,11 @@ class AppViewModel: ObservableObject {
     // MARK: - Path Resolution
 
     /// Resolves the path to a bundled fetcher script.
-    /// In production (archived .app) the scripts live in Resources/fetcher/.
-    /// During development (running from Xcode) they are copied there by the
-    /// build phase, so the bundle path always takes priority. The fallback
-    /// checks common project locations in case the build phase hasn't run yet.
+    /// Scripts are copied into Resources/fetcher/ by the Xcode build phase
+    /// and are always available at runtime. No fallback needed.
     private func scriptPath(_ filename: String) -> String {
-        // Primary: scripts copied into the app bundle by the build phase
-        if let resourcePath = Bundle.main.resourcePath {
-            let bundled = "\(resourcePath)/fetcher/\(filename)"
-            if FileManager.default.fileExists(atPath: bundled) {
-                return bundled
-            }
-        }
-        // Development fallbacks: check common project locations on disk.
-        // Ordered from most likely to least likely for the current setup.
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let devCandidates = [
-            "\(home)/Documents/Bodily/fetcher/\(filename)",
-            "\(home)/Library/Developer/Xcode/UntitledProjects/GarminWidget/fetcher/\(filename)",
-        ]
-        for candidate in devCandidates {
-            if FileManager.default.fileExists(atPath: candidate) {
-                return candidate
-            }
-        }
-        // Last resort: return the most likely path so the error message is meaningful
-        return devCandidates[0]
+        let resourcePath = Bundle.main.resourcePath ?? ""
+        return "\(resourcePath)/fetcher/\(filename)"
     }
 
     /// Path to the Python fetcher script
@@ -332,21 +312,22 @@ class AppViewModel: ObservableObject {
     }
     
     /// Runs the fetcher, reloads metrics, and tells WidgetKit to refresh.
-    /// This is the single action triggered by the refresh button.
+    /// This is the single action triggered by the refresh button and after login.
     func refresh() {
         guard !isRefreshing else { return }
-        isRefreshing = true
-        
-        let task = Process()
-        // Ensure the venv is set up before running the fetcher (first-launch path)
-        ensureEnvironmentSetup()
 
+        // If the Python venv hasn't been set up yet (first launch), defer the fetch
+        // until ensureEnvironmentSetup() completes — it will call refresh() again.
+        if !FileManager.default.fileExists(atPath: venvPythonPath) {
+            ensureEnvironmentSetup()
+            return
+        }
+
+        isRefreshing = true
+
+        let task = Process()
         task.executableURL = URL(fileURLWithPath: resolvedPythonPath)
         task.arguments = [fetcherScriptPath]
-        
-        // Use the full parent process environment so Python and its
-        // dependencies (curl_cffi, shared libraries, etc.) can find
-        // everything they need (e.g. /opt/homebrew/bin on Apple Silicon).
         task.environment = ProcessInfo.processInfo.environment
         
         DispatchQueue.global(qos: .userInitiated).async {
@@ -354,12 +335,10 @@ class AppViewModel: ObservableObject {
                 try task.run()
                 task.waitUntilExit()
                 
-                // Reload status and widget on the main thread
                 DispatchQueue.main.async {
                     self.loadStatus()
                     WidgetCenter.shared.reloadTimelines(ofKind: "BodilyWidget")
                     
-                    // Stop animation after a short delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.isRefreshing = false
                     }
@@ -530,6 +509,18 @@ class AppViewModel: ObservableObject {
         SecItemDelete(query as CFDictionary)
     }
 
+    // MARK: - Sparkle Updates
+
+    /// Enables Sparkle update checks after the user has logged in.
+    /// Called once on first successful login — subsequent launches will have
+    /// the feed URL already set in UserDefaults from the prior session.
+    private func enableSparkleUpdates() {
+        let feedURL = "https://raw.githubusercontent.com/terrancehah/Bodily/main/appcast.xml"
+        UserDefaults.standard.set(feedURL, forKey: "SUFeedURL")
+        // Trigger an initial check in the background — silent, no dialog on success
+        SUUpdater.shared()?.checkForUpdatesInBackground()
+    }
+
     // MARK: - Environment Setup
 
     /// Ensures the Python venv with garminconnect exists and the launchd agent is
@@ -592,6 +583,8 @@ class AppViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self.isSettingUpEnvironment = false
                 self.checkFetcherStatus()
+                // Now that the venv is ready, run the deferred fetch
+                self.refresh()
             }
         }
     }
@@ -889,6 +882,8 @@ class AppViewModel: ObservableObject {
                     self.hasExistingAuth = true
                     self.loadStatus()
                     self.cleanupLoginProcess()
+                    // Enable Sparkle update checks now that the user is set up
+                    self.enableSparkleUpdates()
                     // Fetch metrics now that login is complete
                     self.refresh()
                 case "mfa_required":

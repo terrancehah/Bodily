@@ -5,19 +5,17 @@ import Sparkle
 /// Provides a minimal dashboard for daily metrics and fetcher controls.
 @main
 struct BodilyApp: App {
-    /// Sparkle auto-update controller — adds "Check for Updates..." to the app menu
-    /// and checks for new DMG releases on GitHub periodically.
-    /// Feed URL is set before initialization so Sparkle picks it up on first launch.
+    /// Sparkle auto-update controller — adds "Check for Updates..." to the app menu.
+    /// Update checks are deferred until after login to avoid errors on first launch
+    /// (the DMG from GitHub is already the latest version).
     private let updaterController: SPUStandardUpdaterController
 
     init() {
-        // Sparkle reads SUFeedURL from UserDefaults before falling back to Info.plist.
-        // Setting it here ensures the updater knows where to find the appcast on first launch.
-        let feedURL = "https://raw.githubusercontent.com/terrancehah/Bodily/main/appcast.xml"
-        UserDefaults.standard.set(feedURL, forKey: "SUFeedURL")
-
+        // Defer update checks until the user has logged in and data is flowing.
+        // On first launch with an empty or missing appcast, Sparkle would show
+        // a confusing error dialog. We enable checks later via enableUpdateChecks().
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: false,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
